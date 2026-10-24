@@ -55,15 +55,16 @@ budget, and both are reasons to read the differences as directions rather
 than exact gaps.
 
 \textbf{Broader impact and ethics.} This work studies aerial video
-understanding. Drone video supports valuable applications---disaster
-response, agriculture, traffic monitoring---and also enables surveillance of
+understanding. Drone video is useful for disaster
+response, agriculture and traffic monitoring, and it also enables surveillance of
 people who did not consent to being recorded. The ReVA dataset is released
 for non-commercial research only and may not be redistributed, and we follow
 those terms and release no new video data. Our most reusable artifact is a
 few-millisecond CPU motion probe that runs on any video. The broader
 caution is methodological: when a benchmark's text alone is over half
 solvable and its test videos appear in training, reported accuracy can
-overstate genuine visual understanding. We therefore recommend that results
-on ReVA and similar benchmarks be reported next to a trained blind baseline
-and per-task numbers.
+overstate genuine visual understanding. A recent survey of aerial video
+benchmarks~\cite{angelidis2026aerialgap} reached the same conclusion from
+the other direction: none of the question-answering benchmarks it audited
+reports a blind floor.
 

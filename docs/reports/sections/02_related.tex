@@ -18,7 +18,14 @@ ReVA~\cite{yao2026reva} introduces the benchmark and the ReMoSense model.
 ReMoSense learns camera-motion tokens from cost volumes (a dense map of how
 well each patch matches the next frame) and object tokens from a recurrent
 transformer. Our motion hint carries the same kind of information, but as
-text, with no new model parts. UrbanVideo-Bench~\cite{zhao2025urbanvideo}
+text, with no new model parts. EgoSIS~\cite{yang2026egosis} is the closest
+drone work we know of. It fits a robust image-plane transform between frames
+from optical flow, which is almost the same measurement our probe makes, and
+turns it into four learned ``spatial evidence'' tokens per slice of video on
+top of Qwen3-VL. On SIS-Bench this lifts an 8B model from 63.1\% to 76.2\%.
+So the two routes start from the same signal and differ only in how it
+reaches the language model: as learned tokens, or as a sentence.
+UrbanVideo-Bench~\cite{zhao2025urbanvideo}
 is another drone-video benchmark. Its videos are filmed from a drone flying
 through city streets, and its questions test whether a model can follow
 the flight, remember what it saw, and plan. Its 5,355 multiple-choice
@@ -41,7 +48,19 @@ fine-tuning the video model. Their approach is the closest to ours: both
 ways. We use a much simpler and faster estimator, because drone scenes are
 nearly flat. We write the hint in the exact words of the benchmark's
 answers. And we fine-tune the model together with the hint, so it learns
-when to trust it. Our estimator itself uses ORB
+when to trust it. Two recent papers learn the motion instead.
+CameraVLM~\cite{cheng2026cameravlm} trains camera and optical-flow tokens
+together with the language model and argues that the motion has to be read
+by the language model, not estimated on its own. CamDistill~\cite{du2026camdistill}
+distills the camera tokens of a 3D model into the video model during
+training, so the 3D model is not needed at test time. It also tries our kind
+of shortcut, writing the 3D model's per-frame pose as text in the prompt,
+without fine-tuning. That helps the model find \emph{when} the motion
+changes but not \emph{which} motion it is. Our results point at the wording
+as one reason. Given to a small model without fine-tuning, the same motion
+numbers dropped camera-motion accuracy from 68.2\% to 55.7\% when written in
+image terms, and brought it to 71.6\% when written in the answers' words
+(Sec.~\ref{sec:cue}). Our estimator itself uses ORB
 features~\cite{rublee2011orb}, simple matching, and a RANSAC
 fit~\cite{fischler1981ransac}.
 
@@ -49,9 +68,21 @@ fit~\cite{fischler1981ransac}.
 option letters regardless of the content, for example ``A'' over ``D''.
 PriDe~\cite{zheng2024pride} measures this preference by showing the same
 question with the options in rotated orders, and then divides it out,
-without needing any correct answers. We use PriDe and option shuffling at
-test time, and random option order during training. A related, older
-problem is the \emph{language prior}: patterns in the questions and answers
-that reveal the answer without the image. Goyal et al.~\cite{goyal2017vqav2}
-showed how strong such priors were in image question answering. Our blind
-baseline (Sec.~\ref{sec:blind}) measures the same effect for ReVA.
+without needing any correct answers. Ok et al.~\cite{ok2026optionbias}
+split this kind of bias into two parts: how often an answer flips when the
+options are reordered, and how strongly the answers lean toward some
+letters. Prior correction such as PriDe mostly fixes the lean, while
+averaging over option orders mostly reduces the flips. We use both: PriDe
+and option shuffling at test time, and random option order during training.
+
+A related, older problem is the \emph{language prior}: patterns in the
+questions and answers that reveal the answer without the image. Goyal et
+al.~\cite{goyal2017vqav2} showed how strong such priors were in image
+question answering, and Chakraborty et al.~\cite{chakraborty2026visualoptions}
+show that video models still lean on the wording of text options: one strong
+model drops from about 74\% to about 30\% when the same options are shown as
+frames instead. For aerial video in particular, a recent meta-analysis of 67
+papers~\cite{angelidis2026aerialgap} found that none of the aerial
+question-answering benchmarks reports a blind (text-only) score, so there is
+no floor to read their accuracies against. Our trained blind baseline
+(Sec.~\ref{sec:blind}) gives that floor for ReVA.

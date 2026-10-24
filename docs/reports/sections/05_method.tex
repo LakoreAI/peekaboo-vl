@@ -192,7 +192,7 @@ Table~\ref{tab:setup} lists all settings of the main run.
 
 \begin{table}[t]
 \centering
-\caption{Training and test settings of the final model (H20).}
+\caption{Training and test settings of the final model.}
 \label{tab:setup}
 \footnotesize
 \begin{tabular}{@{}ll@{}}
@@ -207,7 +207,7 @@ Data & all 14,068 fit questions, one per sequence \\
 Optimizer & AdamW, lr $10^{-4}$, 3\% warm-up, cosine decay \\
 Batch & 1 $\times$ 16 accumulation, 880 steps (1 pass), clip 1.0 \\
 Training time & 17\,h (about 70\,s per 16-question step) \\
-Hardware & 1$\times$ NVIDIA A40 (46\,GB), 28\,GB used \\
+Hardware & 1$\times$ NVIDIA A40 (46\,GB) \\
 Speed & 4.3\,s per training question \\
 Decoding & PriDe~\cite{zheng2024pride} (5\% subset) or plain \\
 \bottomrule

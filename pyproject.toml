@@ -1,7 +1,7 @@
 [project]
 name = "peekaboo-vl"
 version = "0.1.0"
-description = "Peekaboo-VL: drone video QA for the ReVA challenge (MAVU @ WACV 2027) with text-injected camera-motion, count, and timestamp cues on Qwen3.5 / Qwen3-VL"
+description = "Peekaboo-VL: drone (UAV) video question answering with camera-motion text hints and LoRA letter scoring on Qwen3.5-9B (ReVA challenge, MAVU @ WACV 2027)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -36,7 +36,8 @@
 \title{Peekaboo-VL: Camera-Motion Text Hints and LoRA Letter Scoring\\for Drone Video Question Answering}
 
 \author{\IEEEauthorblockN{Le Duc Minh}
-\IEEEauthorblockA{\texttt{minh.leduc.0210@gmail.com}\\
+\IEEEauthorblockA{Independent researcher\\
+\texttt{minh.leduc.0210@gmail.com}\\
 MAVU Workshop @ WACV 2027 --- ReVA Drone Video Understanding Challenge}}
 
 \maketitle
@@ -64,9 +65,13 @@ test questions that the validation set happens to label). (ii)~A
 text-only model that never sees a frame scores 55.9\%, so the real floor
 is 56\%, not 25\%. (iii)~The wording of a text hint matters more than the
 measurement behind it: the same numbers in image terms cost a small model
-12.5 points on camera-motion questions, and in answer terms gain 16.
+12.5 points on camera-motion questions, while in the answers' own words
+they score 16 points higher than that.
 Temporal grounding remains the hardest task; its errors are near-misses of
 about one second, the gap between the timestamps the model sees.
+
+Code: \url{https://github.com/LakoreAI/peekaboo-vl}.
+Weights: \url{https://huggingface.co/LakoreAI/peekaboo-vl}.
 \end{abstract}
 
 \begin{IEEEkeywords}

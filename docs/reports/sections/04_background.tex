@@ -3,7 +3,7 @@
 \label{sec:background}
 
 A video language model does not watch a whole clip. It reads a small number
-of frames---16 or 32 in this paper, taken at even intervals. Each frame is cut into patches,
+of frames, 16 or 32 in this paper, taken at even intervals. Each frame is cut into patches,
 a vision encoder turns the patches into vectors, and the vectors are placed
 into the language model's input next to the words of the question.
 Qwen3-VL and Qwen3.5 also write a short text timestamp (for example

@@ -59,10 +59,11 @@ Hawk-UAV. The organizers' own model, ReMoSense, extends
 Qwen2.5-VL-7B~\cite{qwen25vl2025} with learned camera-motion tokens and
 object tokens and reaches 80.04\% on test. Their ablation says the
 camera-motion tokens alone are worth 3.9 points overall and 9 points on
-temporal questions. So camera motion matters. The question is how to get it
-into the model.
+temporal questions. Camera motion clearly matters, so the real choice is
+how to get it into the model.
 
-Training new motion modules was not an option for us. So we asked a
+This work was done by one independent researcher with a single rented GPU,
+so training new motion modules was not an option. We asked a
 simpler question: if the model cannot see the camera motion well, why not
 just tell it? Drone footage makes that cheap. The ground is far away and
 close to flat, so how one frame lines up with the next is described by a
@@ -88,8 +89,8 @@ Qwen3.5-9B, the system reaches 83.6\% on the ReVA test leaderboard, 3.5
 points above the organizers' purpose-built ReMoSense-7B, using no new
 network parts and one GPU. We are explicit about where this margin comes
 from: the 9B backbone alone already matches ReMoSense, and fine-tuning on
-the seen videos adds the rest. After fine-tuning, the model demonstrably
-reads the hint, but removing it costs only about 0.2 points overall.
+the seen videos adds the rest. After fine-tuning, the model does read
+the hint, but removing it costs only about 0.2 points overall.
 \item \textbf{A benchmark audit.} The ReVA test set asks new questions
 about videos that are already in training, and the official validation set
 is largely a copy of training questions. We build a development split with
@@ -101,15 +102,16 @@ numbers.
 \item \textbf{Wording over measurement.} The same motion measurements,
 written in image terms (``the image shifts up'') rather than the answers'
 words, \emph{lowered} a small model's accuracy on camera-motion questions
-by 12.5 points; the answer words raised it by 16. A text hint's wording is
-first-order, not a detail.
+by 12.5 points. Written in the answers' words, the same numbers scored 16
+points higher than that, and 3.4 above no hint at all. A text hint's
+wording is first-order, not a detail.
 \item \textbf{An empirical map, negative results included.} We measure
 what each part is worth with pre-registered success rules: the motion hint
 after fine-tuning, question packing, letter-prior debiasing and prior
 fusion, an object-motion hint, a caption hint from the benchmark's own
 question writer, a second training epoch, and frame density at test
 time. Temporal grounding stays the hardest task, and its errors are
-near-misses of about one second---the gap between the timestamps the model
+near-misses of about one second, the gap between the timestamps the model
 sees.
 \end{itemize}
 
