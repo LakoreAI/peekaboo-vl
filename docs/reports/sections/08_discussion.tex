@@ -17,24 +17,6 @@ just as confidently as a right one. Fine-tuning lets the model learn when
 to ignore the hint, and our test with wrong hints shows it does: it follows
 the hint on camera-motion questions and ignores it elsewhere.
 
-\textbf{Takeaways we are carrying forward.}
-\begin{enumerate}
-\item Check how the test relates to the training data before building
-anything. Here, the test asks new questions about seen videos, and the
-validation set is mostly copies.
-\item Build a dev set that copies the test setting, and weight it by the
-test's task mix.
-\item Train a blind baseline first. It tells you what the video adds and
-which tasks need it.
-\item When you add text hints, use the words of the answers.
-\item Shuffle answer options during training; most letter bias then
-disappears, but cheap debiasing (PriDe) still won on the test.
-\item Do not trust dev gains of about one point, whether from decoding,
-hints or model combinations; several of ours vanished on the test.
-\item Do not change the frame layout at test time unless the model was
-trained with that layout.
-\end{enumerate}
-
 \textbf{Limitations.} Most ablations ran on our first model (57\% of the
 fit questions, 16 frames) or on the packed recipe, not on the final model,
 so their deltas are directions for the final recipe, not measurements of
