@@ -1,0 +1,15 @@
+% Peekaboo-VL report: appendix_c_setup. Included from ../peekaboo_report.tex.
+\section{Computing Setup}
+\label{app:setup}
+All training and scoring ran on one cloud virtual machine:
+\begin{itemize}
+\item \textbf{GPU:} 1$\times$ NVIDIA A40 (46\,GB).
+\item \textbf{CPU:} Intel Xeon Gold 6342, 96 threads; 503\,GB RAM.
+\item \textbf{Software:} PyTorch 2.14.1 with CUDA 12.6, Hugging Face
+Transformers 5.18.0, and the \texttt{flash-linear-attention} kernels for
+the Gated DeltaNet layers.
+\end{itemize}
+Frame decoding and the motion hints run on the CPU; all 1,047 clips take
+under a minute for each. The final training run takes about 17\,h and
+uses 28\,GB of GPU memory (Table~\ref{tab:setup}); the first 9B run (16
+frames, 8,000 questions) took 5.2\,h and 25\,GB.

@@ -1,0 +1,121 @@
+% Peekaboo-VL paper: 01_intro. Included from ../peekaboo_report.tex.
+\section{Introduction}
+
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=5mm and 7mm]
+% lane 1: video
+\node[box, fill=io, minimum width=21mm] (clip) {UAV clip\\(any length, fps)};
+\node[box, fill=io, right=of clip, minimum width=24mm] (cache) {Frame cache\\64 frames + fps\\+ frame indices};
+\node[box, fill=vis, right=of cache, minimum width=30mm] (frames) {32 frames, 640$\times$352\\true timestamps\\\texttt{<1.9 s>}\,\texttt{<5.6 s>}\,\ldots\\(+ clock on timing Qs)};
+\node[box, fill=vis, right=of frames, minimum width=24mm] (vit) {Vision tower (frozen)\\+ merger (LoRA)};
+% lane 2: cue
+\node[box, fill=cue, below=of frames, minimum width=30mm] (probe) {Motion probe (CPU)\\ORB $\to$ RANSAC similarity\\$\to$ pan / zoom / yaw};
+\node[box, fill=cue, right=of probe, minimum width=24mm] (text) {Hint text, answer\\words: ``moving\\forward quickly\ldots''};
+% lane 3: question
+\node[box, fill=io, below=of probe, minimum width=30mm] (qa) {Question + options A--D};
+% language model spanning the lanes
+\node[box, fill=llm, right=9mm of text, minimum width=30mm, minimum height=34mm] (lm) {Language model\\(backbone)\\[2pt]reads frames,\\hint and question\\[2pt]LoRA adapters\\on its linear layers};
+% outputs
+\node[box, fill=llm, right=9mm of lm, minimum width=26mm, yshift=11mm] (head) {Next-token scores\\of A, B, C, D};
+\node[box, fill=io, below=of head, minimum width=26mm] (dec) {PriDe / option-order TTA\\frame-time jitter\\(opt.) prior fusion};
+\node[box, fill=io, below=of dec, minimum width=26mm] (out) {Answer letter};
+\node[box, fill=cue, left=9mm of out, minimum width=24mm, yshift=-10mm] (blind) {Blind text scorer\\(no video)};
+% edges
+\draw[arr] (clip) -- (cache);
+\draw[arr] (cache) -- (frames);
+\draw[arr] (cache.south) |- (probe.west);
+\draw[arr] (frames) -- (vit);
+\draw[arr] (probe) -- (text);
+\draw[arr] (vit.east) -- ++(2.5mm,0) |- ([yshift=11mm]lm.west);
+\draw[arr] (text.east) -- (lm.west |- text.east);
+\draw[arr] (qa.east) -- (lm.west |- qa.east);
+\draw[arr] (qa.south) |- (blind.west);
+\draw[arr] (lm.east |- head.west) -- (head.west);
+\draw[arr] (head) -- (dec);
+\draw[arr] (blind.east) -- ++(5mm,0) |- (dec.west);
+\draw[arr] (dec) -- (out);
+\end{tikzpicture}}
+\caption{The Peekaboo-VL pipeline. Each clip is decoded once into a cache
+that keeps its frame rate and which frames were taken, so the prompt can
+carry true times. A CPU step measures how the camera moves between frames
+and writes it as one line of text in the answers' own words. The backbone
+language model, fine-tuned with LoRA, scores the four letters. The final step can remove letter bias
+and, optionally, mix in a text-only prior.}
+\label{fig:system}
+\end{figure*}
+
+
+Drone video is an unfriendly input for a video language model. The camera
+never stops moving, often faster than anything on the ground, so ``the car
+moves'' and ``the camera moves'' look alike. The cars are a few pixels
+wide. And many questions ask \emph{when} something happens, which needs a
+finer sense of time than the model usually gets.
+
+The ReVA benchmark~\cite{yao2026reva} tests exactly this, with eleven
+question tasks over clips from VisDrone, UAVDT, ERA and a new collection,
+Hawk-UAV. The organizers' own model, ReMoSense, extends
+Qwen2.5-VL-7B~\cite{qwen25vl2025} with learned camera-motion tokens and
+object tokens and reaches 80.04\% on test. Their ablation says the
+camera-motion tokens alone are worth 3.9 points overall and 9 points on
+temporal questions. So camera motion matters. The question is how to get it
+into the model.
+
+Training new motion modules was not an option for us. So we asked a
+simpler question: if the model cannot see the camera motion well, why not
+just tell it? Drone footage makes that cheap. The ground is far away and
+close to flat, so how one frame lines up with the next is described by a
+shift, a zoom and a rotation. Classic computer vision measures those in a
+few milliseconds on a CPU. We write the result as one line of text and let
+fine-tuning decide how much to trust it (Fig.~\ref{fig:system}). The same
+idea covers two other things the model cannot easily see: the true time of
+each frame, which recent Qwen models read as text
+timestamps~\cite{qwen3vl2025}, and the habits of whoever wrote the
+answers, which a tiny text-only model picks up surprisingly well.
+
+We entered the ReVA challenge with one A40 GPU and a few weeks.
+This paper reports what that budget bought, including the experiments
+that failed. Our contributions are:
+
+\begin{itemize}
+\item \textbf{Tell, don't learn.} We inject camera ego-motion as text
+instead of adding learned motion tokens. A CPU probe measures the motion
+between sampled frames in a few milliseconds, and we render it in the
+benchmark's own answer vocabulary (``moving forward'', ``panning left''),
+so the model can match it to the options. Fine-tuned with LoRA on
+Qwen3.5-9B, the system reaches 83.6\% on the ReVA test leaderboard, 3.5
+points above the organizers' purpose-built ReMoSense-7B, using no new
+network parts and one GPU. We are explicit about where this margin comes
+from: the 9B backbone alone already matches ReMoSense, and fine-tuning on
+the seen videos adds the rest. After fine-tuning, the model demonstrably
+reads the hint, but removing it costs only about 0.2 points overall.
+\item \textbf{A benchmark audit.} The ReVA test set asks new questions
+about videos that are already in training, and the official validation set
+is largely a copy of training questions. We build a development split with
+no training-answer leak that mirrors the test regime and tracks the test
+score to about one point. A fifth of it are test questions whose answers
+the validation set happens to contain, and we say so. We argue that ReVA
+results should be reported alongside a trained blind baseline and per-task
+numbers.
+\item \textbf{Wording over measurement.} The same motion measurements,
+written in image terms (``the image shifts up'') rather than the answers'
+words, \emph{lowered} a small model's accuracy on camera-motion questions
+by 12.5 points; the answer words raised it by 16. A text hint's wording is
+first-order, not a detail.
+\item \textbf{An empirical map, negative results included.} We measure
+what each part is worth with pre-registered success rules: the motion hint
+after fine-tuning, question packing, letter-prior debiasing and prior
+fusion, an object-motion hint, a caption hint from the benchmark's own
+question writer, a second training epoch, and frame density at test
+time. Temporal grounding stays the hardest task, and its errors are
+near-misses of about one second---the gap between the timestamps the model
+sees.
+\end{itemize}
+
+The rest of the paper follows the system: data and split
+(Sec.~\ref{sec:data}), what it is built on and how it compares to prior
+work (Sec.~\ref{sec:related}, Sec.~\ref{sec:background}), the method
+step by step (Sec.~\ref{sec:method}), the main results
+(Sec.~\ref{sec:results}), and an ablation of every part
+(Sec.~\ref{sec:ablation}).

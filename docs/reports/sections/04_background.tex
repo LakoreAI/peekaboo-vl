@@ -1,0 +1,26 @@
+% Peekaboo-VL paper: 04_background. Included from ../peekaboo_report.tex.
+\section{Background}
+\label{sec:background}
+
+A video language model does not watch a whole clip. It reads a small number
+of frames---16 or 32 in this paper, taken at even intervals. Each frame is cut into patches,
+a vision encoder turns the patches into vectors, and the vectors are placed
+into the language model's input next to the words of the question.
+Qwen3-VL and Qwen3.5 also write a short text timestamp (for example
+\texttt{<3.0 seconds>}) before each pair of frames, which is how the model
+knows \emph{when} each frame was taken.
+
+This design has two weak points on drone video. The motion between frames is
+never given directly: the model must infer it from differences between frames
+that may be a second apart. And with 16 frames the model sees roughly one
+timestamp per second on a typical clip (two per second at 32), so it cannot separate events closer together than
+that. The rest of the paper addresses both.
+
+Our remaining design choices are standard, so we fix them here and use them
+throughout. We score the four answer letters instead of generating an
+answer (Sec.~\ref{sec:method}). We fine-tune with
+LoRA~\cite{hu2022lora}. We measure the video's true contribution against a
+blind text-only baseline (Sec.~\ref{sec:blind}), following the lesson of
+Goyal et al.~\cite{goyal2017vqav2} that question sets carry answer patterns
+which need no image. And we compare two systems with a paired exact McNemar
+test, under success rules written down before each run.

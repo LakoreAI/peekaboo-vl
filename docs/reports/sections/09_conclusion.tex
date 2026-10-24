@@ -1,0 +1,18 @@
+% Peekaboo-VL paper: 09_conclusion. Included from ../peekaboo_report.tex.
+\section{Conclusion}
+Telling a model what it cannot see is a cheap and inspectable alternative
+to learning it. A few-millisecond CPU probe that writes camera motion in the
+answers' own words, plus LoRA on an off-the-shelf video language model,
+scores 3.5 points above a purpose-built motion architecture on ReVA, with
+no new network parts and one GPU. Most of that margin comes from the newer
+backbone and from fine-tuning on the seen videos; the fine-tuned model
+reads the hint, but the hint itself adds little. Three findings outlast the benchmark: the test
+regime is seen-video, so a development split without training-answer
+leaks is essential; text
+alone solves 56\%, so the video's true contribution must be measured against
+a blind baseline; and a hint's wording matters more than the measurement
+behind it. Temporal grounding remains the weakest task. Training with 32 shifted
+frames and a drawn clock raised it by 2.7 points, but its errors are still
+near-misses of about one timestamp. More broadly, we hope the paper
+encourages reporting text-only baselines and per-task numbers in video QA
+benchmarks, where they are still often left out.

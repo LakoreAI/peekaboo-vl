@@ -1,0 +1,95 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,backgrounds}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Numbers that depend on runs still in progress are marked and filled in last.
+\newcommand{\pending}[1]{\textcolor{red}{#1}}
+
+\definecolor{vis}{HTML}{DCE8F5}
+\definecolor{llm}{HTML}{FBE8D3}
+\definecolor{io}{HTML}{EFEFEF}
+\definecolor{cue}{HTML}{E4F2E1}
+\definecolor{s1}{HTML}{2A78D6}
+\definecolor{s2}{HTML}{EB6834}
+\definecolor{s3}{HTML}{1BAF7A}
+\definecolor{s4}{HTML}{EDA100}
+\tikzset{
+  box/.style={draw, rounded corners=2pt, align=center, font=\footnotesize,
+              inner sep=3pt, minimum height=7mm},
+  arr/.style={-{Stealth[length=2mm]}, semithick},
+}
+
+\begin{document}
+
+\title{Peekaboo-VL: Camera-Motion Text Hints and LoRA Letter Scoring\\for Drone Video Question Answering}
+
+\author{\IEEEauthorblockN{Le Duc Minh}
+\IEEEauthorblockA{\texttt{minh.leduc.0210@gmail.com}\\
+MAVU Workshop @ WACV 2027 --- ReVA Drone Video Understanding Challenge}}
+
+\maketitle
+
+\begin{abstract}
+Drone video is hard for video language models: the camera never stops
+moving, objects are a few pixels wide, and many questions ask \emph{when}
+something happens. The organizers' model, ReMoSense, adds learned
+camera-motion tokens and reports a 3.9-point gain. We take the opposite
+route: instead of teaching the model motion, we \emph{tell} it. A CPU probe
+estimates the frame-to-frame camera motion in milliseconds and renders it
+as one sentence in the benchmark's own answer vocabulary (``moving
+forward'', ``panning left''). Fine-tuning Qwen3.5-9B with LoRA at 32
+frames and reading the answer from the letter scores A--D, our system
+reaches 83.6\% on the ReVA test leaderboard, 3.5 points above ReMoSense,
+with no new network parts and one GPU. Most of that margin comes from the
+newer backbone and from fine-tuning on the test's videos, which already
+appear in training; the hint itself is cheap and easy to inspect, but its
+measured effect after fine-tuning is small. Beyond the headline number we
+report three findings that generalize. (i)~The test set asks new questions
+about videos already in training, and the official validation set mostly
+repeats training; we build a development split with no training-answer
+leak that tracks the test score to about one point (a fifth of it are
+test questions that the validation set happens to label). (ii)~A
+text-only model that never sees a frame scores 55.9\%, so the real floor
+is 56\%, not 25\%. (iii)~The wording of a text hint matters more than the
+measurement behind it: the same numbers in image terms cost a small model
+12.5 points on camera-motion questions, and in answer terms gain 16.
+Temporal grounding remains the hardest task; its errors are near-misses of
+about one second, the gap between the timestamps the model sees.
+\end{abstract}
+
+\begin{IEEEkeywords}
+video question answering, drones, UAV, vision-language models,
+camera motion, multiple-choice bias, LoRA fine-tuning
+\end{IEEEkeywords}
+
+\input{sections/01_intro}
+\input{sections/02_related}
+\input{sections/03_data}
+\input{sections/04_background}
+\input{sections/05_method}
+\input{sections/06_results}
+\input{sections/07_ablation}
+\input{sections/08_discussion}
+\input{sections/09_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\appendices
+% \input{sections/appendix_a_negative}  % cut for the paper (kept in the repo)
+% \input{sections/appendix_b_wip}        % cut for the paper (kept in the repo)
+\input{sections/appendix_c_setup}
+
+\end{document}

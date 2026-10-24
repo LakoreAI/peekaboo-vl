@@ -1,0 +1,69 @@
+% Peekaboo-VL report: 08_discussion. Included from ../peekaboo_report.tex.
+\section{Discussion and Limitations}
+
+\textbf{What the video adds.} On ReVA, a text-only model already
+reaches 56\% and a 9B video model without fine-tuning 80\%. So most of the remaining
+room is in a few tasks: Temporal Grounding, Change Detection and Geometric
+Relation. These are exactly the tasks the blind scorer cannot solve. We
+suggest that results on ReVA be reported together with a trained blind
+baseline and per-task numbers, so readers can see what comes from the
+video.
+
+\textbf{Telling instead of learning.} Text hints are cheap, easy to read
+and check, and work with any model. But they have two risks that learned
+motion tokens do not. First, their wording interacts with the answer
+options, as Section~\ref{sec:cue} shows. Second, a wrong hint is stated
+just as confidently as a right one. Fine-tuning lets the model learn when
+to ignore the hint, and our test with wrong hints shows it does: it follows
+the hint on camera-motion questions and ignores it elsewhere.
+
+\textbf{Takeaways we are carrying forward.}
+\begin{enumerate}
+\item Check how the test relates to the training data before building
+anything. Here, the test asks new questions about seen videos, and the
+validation set is mostly copies.
+\item Build a dev set that copies the test setting, and weight it by the
+test's task mix.
+\item Train a blind baseline first. It tells you what the video adds and
+which tasks need it.
+\item When you add text hints, use the words of the answers.
+\item Shuffle answer options during training; most letter bias then
+disappears, but cheap debiasing (PriDe) still won on the test.
+\item Do not trust dev gains of about one point, whether from decoding,
+hints or model combinations; several of ours vanished on the test.
+\item Do not change the frame layout at test time unless the model was
+trained with that layout.
+\end{enumerate}
+
+\textbf{Limitations.} Most ablations ran on our first model (57\% of the
+fit questions, 16 frames) or on the packed recipe, not on the final model,
+so their deltas are directions for the final recipe, not measurements of
+it. Our dev split shares clips with the fit set on purpose: it measures
+the ``seen video, new question'' setting of this challenge, not how well
+the model handles new videos. A fifth of dev are test questions whose
+answers the official validation file contains, which makes dev a closer
+proxy for the test than a disjoint split would be; we never used those
+answers to pick test predictions. We did not use the
+training answers about a test clip as context at test time (``video
+memory''); the organizers confirmed that this is not allowed, although
+training on those labels is. Finally, the probe's four-number motion model
+cannot represent camera turns on strongly tilted views; a homography, as
+used in our object-motion hint, is the natural next step. Our headline
+comparison is against ReMoSense's published numbers rather than a
+reproduction, and every configuration is a single seed; both are about our
+budget, and both are reasons to read the differences as directions rather
+than exact gaps.
+
+\textbf{Broader impact and ethics.} This work studies aerial video
+understanding. Drone video supports valuable applications---disaster
+response, agriculture, traffic monitoring---and also enables surveillance of
+people who did not consent to being recorded. The ReVA dataset is released
+for non-commercial research only and may not be redistributed, and we follow
+those terms and release no new video data. Our most reusable artifact is a
+few-millisecond CPU motion probe that runs on any video. The broader
+caution is methodological: when a benchmark's text alone is over half
+solvable and its test videos appear in training, reported accuracy can
+overstate genuine visual understanding. We therefore recommend that results
+on ReVA and similar benchmarks be reported next to a trained blind baseline
+and per-task numbers.
+

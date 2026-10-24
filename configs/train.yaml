@@ -1,0 +1,55 @@
+# Peekaboo-VL training config: LoRA fine-tuning of Qwen3.5-9B on the fit split,
+# 1 epoch, 32 frames with a random frame phase per training example, the
+# camera-motion cue, and a time bar drawn on Temporal Grounding frames.
+# Dev is scored after the epoch with PriDe. The model / video / prompt / LoRA
+# shape lives in the `arch` block (src/config.py ModelConfig) and is saved into
+# every checkpoint.
+
+reva_root: data/raw/reva
+frames_root: data/processed/frames
+cues_root: data/processed/cues
+train_files: [data/processed/splits/fit.json]
+dev_file: data/processed/splits/dev.json
+memory_files: null
+max_train_examples: 0
+max_dev_examples: 0
+seed: 42
+ckpt_dir: checkpoints
+result_dir: results
+run_name: peekaboo_vl
+epochs: 1
+batch_size: 1
+eval_batch_size: 2
+accum_steps: 16
+num_workers: 6
+pin_memory: true
+lr: 0.0001
+weight_decay: 0.0
+max_grad_norm: 1.0
+label_smoothing: 0.0
+shuffle_options: true
+log_every: 10
+eval_every_steps: 0
+ckpt_every: 1
+pack_questions: 1
+train_frame_phase_jitter: true
+arch:
+  backbone: Qwen/Qwen3.5-9B
+  num_frames: 32
+  max_pixels_per_frame: 230400
+  cues: [motion_camera]
+  overlay_time: true
+  overlay_time_tasks: [Temporal Grounding]
+  lora: {r: 64, alpha: 128, dropout: 0.05}
+  lora_merger: true
+  gradient_checkpointing: true
+tta: pride
+pride_fraction: 0.05
+lr_scheduler: {type: warmup_cosine, warmup_ratio: 0.03}
+early_stopping: {enabled: false}
+save_best: true
+best_metric: test_weighted_accuracy
+best_mode: max
+wandb: {enabled: true, project: peekaboo-vl, entity: null, group: null, monitor: test_weighted_accuracy,
+  mode: max, log_artifacts: false}
+save_every_steps: 100

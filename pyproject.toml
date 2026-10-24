@@ -1,0 +1,80 @@
+[project]
+name = "peekaboo-vl"
+version = "0.1.0"
+description = "Peekaboo-VL: drone video QA for the ReVA challenge (MAVU @ WACV 2027) with text-injected camera-motion, count, and timestamp cues on Qwen3.5 / Qwen3-VL"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "huggingface-hub>=0.34",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.10",
+    "pillow>=10.0",
+    "pyyaml>=6.0.3",
+    "torch>=2.2",
+    # Video processors in transformers 5 are torchvision-backed.
+    "torchvision>=0.17",
+    # qwen3_5 / qwen3_vl processors with video_metadata support.
+    "transformers>=5.17",
+]
+
+[project.optional-dependencies]
+wandb = ["wandb>=0.16"]
+# Pretty training preamble (panels / tables). Falls back to plain text if absent.
+rich = ["rich>=13.0"]
+# LoRA / QLoRA fine-tuning (GPU box).
+llm = [
+    "accelerate>=1.0",
+    "bitsandbytes>=0.46 ; sys_platform == 'linux'",
+    # Triton kernels for Qwen3.5's Gated DeltaNet layers; without them
+    # transformers falls back to a slow PyTorch reference. causal-conv1d (the
+    # other kernel) needs a CUDA build: install it by hand on the GPU box,
+    # with nvcc on PATH (~9 min on the A40 VM, 2026-10-02):
+    #   CUDA_HOME=/usr/local/cuda-12.8 uv pip install ninja packaging setuptools wheel
+    #   CUDA_HOME=/usr/local/cuda-12.8 CAUSAL_CONV1D_FORCE_BUILD=TRUE \
+    #     uv pip install --no-build-isolation "causal-conv1d>=1.5"
+    "flash-linear-attention>=0.3 ; sys_platform == 'linux'",
+    "peft>=0.17",
+]
+# VisDrone YOLO object counts (scripts/data/compute_counts_cues.py).
+detect = ["ultralytics>=8.3"]
+
+# Platform-aware torch builds.
+#   - Linux + NVIDIA: resolve the CUDA wheel index.
+#   - macOS (Apple Silicon): PyTorch ships CPU/MPS arm64 wheels on its own
+#     index; the CUDA index has no macOS builds, so darwin resolves CPU.
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+]
+torchvision = [
+    { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform == 'darwin'" },
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "matplotlib>=3.11.1",
+    "pre-commit>=4.0",
+    "pytest>=9.1.1",
+    "ruff==0.15.15",
+]
+
+[tool.ruff]
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint.per-file-ignores]
+# scripts/*.py run standalone (not `python -m`), so they need sys.path
+# patched with the repo root before their src.* imports resolve.
+"scripts/**/*.py" = ["E402"]

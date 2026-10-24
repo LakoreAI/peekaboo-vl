@@ -1,0 +1,36 @@
+% Peekaboo-VL paper: appendix_b_wip. Included from ../peekaboo_report.tex.
+\section{Ongoing and Future Work}
+\label{sec:wip}
+Several experiments are running or planned, each with its success rule
+written down before it runs; their results go into
+Section~\ref{sec:ablation}, where numbers in red are filled in when they
+finish.
+
+\begin{itemize}
+\item \textbf{All fit questions, three passes.} Packing makes a run about
+4.5 times faster; this run spends that on all 14,068 fit questions for
+three passes, keeping the best pass by test-weighted dev (the earlier
+$8{,}000$-question, one-pass recipe was limited by our first GPU window).
+\item \textbf{Detector counts as a second hint.} We precompute object counts
+for all 1,047 clips with a VisDrone-trained YOLO11x (first, middle and last
+cached frame) and write them in the answers' words (``car 23''). The counts
+are stored with the motion hints and reused by every run, so no detector is
+needed at train or test time. Same rule as the other hints: keep it only if
+it raises test-weighted dev by at least 0.5 points ($p<0.2$), or raises
+Object \& Land Cover by at least 2 points without any task losing more than
+1.5.
+\item \textbf{Train at 32 frames} for the time-sensitive tasks, following
+the diagnosis in Section~\ref{sec:h6}: the test-time failure to add frames
+shows the fix has to be in training.
+\item \textbf{Weight the training loss by the test's task mix}, so that
+Temporal Grounding and Object \& Land Cover count as much as they do in
+the test.
+\item \textbf{Extra training questions from public annotations.} VisDrone
+and UAVDT publish frame-by-frame boxes for every object. From these one can
+write exact questions such as ``at what time does a bus first appear?''
+or ``how many cars are visible at the beginning?''. We have checked that
+the boxes line up with the ReVA clips. Because these clips include test
+videos, we use them only to write extra \emph{training} questions, never
+as input at test time. The challenge allows external resources, and these
+annotations are public.
+\end{itemize}

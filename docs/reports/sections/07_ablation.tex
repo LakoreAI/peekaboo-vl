@@ -1,0 +1,392 @@
+% Peekaboo-VL report: 07_ablation. Included from ../peekaboo_report.tex.
+\section{Ablation Study}
+\label{sec:ablation}
+This section changes one part of the system at a time and measures what
+it is worth. Not every change could be tested on the full 9B model: the
+first hint experiments ran on the small 0.8B model, and the newer training
+experiments use the faster packed recipe (Sec.~\ref{sec:packing}) instead
+of the 5.2-hour first 9B run, and the last block uses the final recipe. So
+each row in Table~\ref{tab:ablation} names its own reference, and only rows
+with the same reference should be compared with each other.
+
+\begin{table}[t]
+\centering
+\caption{All ablations in one place. Each block changes one part of the
+system; ``Ref.'' is the reference score (\%) and $\Delta$ the change in
+points. FT = fine-tuned, TW = test-weighted dev.}
+\label{tab:ablation}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{0.47\columnwidth}p{0.25\columnwidth}rr@{}}
+\toprule
+Change & Measured on & Ref. & $\Delta$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Language model} (Sec.~\ref{sec:backbone}); reference Qwen3.5-9B} \\
+Cosmos-Reason2-8B & no FT, dev & 79.6 & $-2.7$ \\
+Qwen3.8-27B, 4-bit & no FT, dev & 79.6 & $-2.1$ \\
+Qwen3.5-4B & no FT, dev & 79.6 & $-2.6$ \\
+Cosmos-Reason2-8B & FT packed, TW & 81.6 & $-0.7$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Camera-motion hint} (Sec.~\ref{sec:cue}); camera-motion questions (88)} \\
+Answer words, not image words & 0.8B no FT & 55.7 & $+15.9$ \\
+Answer-worded hint vs.\ no hint & 0.8B no FT & 68.2 & $+3.4$ \\
+Hint of a wrong clip & 9B FT & 85.2 & $-13.6$ \\
+Hint removed & 9B FT & 85.2 & $-4.5$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Time detail at test time} (Sec.~\ref{sec:timetest}); exact/range TG (159)} \\
+32 frames instead of 16 & 9B FT & 67.3 & $-5.0$ \\
+Jitter, 3 frame positions & 9B FT & 67.3 & $-4.4$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Text prior mixed in} (Sec.~\ref{sec:prior})} \\
+$\alpha{=}0.75$ fixed in advance & 0.8B no FT, subset & 71.6 & $+6.0$ \\
+$\alpha$ by cross-validation & 9B no FT, dev & 79.6 & $+0.6$ \\
+$\alpha$ by cross-validation & 9B FT, dev & 84.7 & $+0.4$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Training recipe} (Sec.~\ref{sec:packing})} \\
+8 questions per video (packing) & 9B FT, TW & 82.4 & $-0.8$ \\
+Learning rate $2{\times}10^{-4}$ (was $10^{-4}$) & 9B FT packed, TW & 81.6 & $-3.3$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Object-motion hint} (Sec.~\ref{sec:objmotion})} \\
+Object-motion hint added & 9B FT packed, TW & 81.6 & $-0.9$ \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{On the final recipe} (Sec.~\ref{sec:final-ablation})} \\
+Second training pass & final FT, TW & 83.0 & $-0.1$ \\
+Caption hint, dev (PriDe) & final FT & 85.0 & $+0.4$ \\
+Caption hint, test questions in val & final FT, 392 Q & 80.6 & $-1.8$ \\
+64 frames at test (TG, TP, CD) & final FT, 634 Q & 76.7 & $+0.5$ \\
+QA-generator model, Qwen3-VL-30B-A3B & no FT, dev & 79.6 & $+0.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Which language model?}
+\label{sec:backbone}
+Our method does not depend on one particular model: the hint, the letter
+scoring and the LoRA recipe work with any video language model that reads
+frames with timestamps. We therefore tried several backbones
+(Table~\ref{tab:backbone}).
+
+Without fine-tuning, Qwen3.5-9B is the strongest. The larger Qwen3.8-27B, run
+in 4-bit to fit on our GPU, scores lower (77.5\%), and the smaller
+Qwen3.5-4B scores 77.0\%. We also tried NVIDIA's
+Cosmos-Reason2-8B~\cite{nvidia2025cosmosreason2}, a Qwen3-VL-8B model with
+extra training on real-world physical video such as traffic and robots.
+Without fine-tuning it scores 76.9\%, 2.7 points below Qwen3.5-9B; it is
+weaker on Viewpoint ($-11.5$) and the reasoning tasks, but slightly better
+on Trend \& Pattern ($+2.7$).
+
+We then fine-tuned Cosmos-Reason2-8B with exactly the same recipe as a
+Qwen3.5-9B run (8 questions per video in one sequence;
+Sec.~\ref{sec:packing}). Fine-tuning helps it even more than Qwen (+7.6
+test-weighted), but it still ends 0.7 points below Qwen3.5-9B with the same
+recipe and 1.5 points below our first unpacked Qwen3.5-9B model. Almost all of the
+gap comes from one task, Change Detection ($-8.7$). On Viewpoint, Trend \&
+Pattern, Object \& Land Cover and Temporal Grounding it is 1--2 points
+\emph{better}, which makes it a promising partner for combining two models.
+Qwen3.5-9B remains our main model and is the one behind our test score.
+
+\begin{table}[t]
+\centering
+\caption{Language models we tried (dev accuracy \%; TW = test-weighted).
+``Packed'' runs put 8 questions per video in one training sequence.}
+\label{tab:backbone}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Model & Dev & TW \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{No fine-tuning}} \\
+Qwen3.5-4B & 77.0 & -- \\
+Qwen3.8-27B (4-bit) & 77.5 & -- \\
+Cosmos-Reason2-8B & 76.9 & 73.3 \\
+\textbf{Qwen3.5-9B} & 79.6 & -- \\
+Qwen3-VL-30B-A3B (FP8; + caption hint) & \textbf{80.0} & 76.8 \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Fine-tuned, packed recipe}} \\
+Cosmos-Reason2-8B & 83.4 & 80.9 \\
+\textbf{Qwen3.5-9B} & \textbf{84.3} & \textbf{81.6} \\
+\midrule
+\multicolumn{3}{@{}l}{\textit{Fine-tuned, unpacked}} \\
+Qwen3.5-9B, first model (16 frames) & 84.7 & 82.4 \\
+\textbf{Qwen3.5-9B}, final (32 frames, plain) & \textbf{85.4} & \textbf{83.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Does the wording of the hint matter?}
+\label{sec:cue}
+We first tested the motion hint with the small Qwen3.5-0.8B model, without
+fine-tuning. We used all 191 dev Viewpoint questions, 88 of which ask about
+camera motion, and a control set of 100 causal and general questions that
+should not depend on motion (Table~\ref{tab:cue}).
+
+The first wording, which described motion in image terms, made things
+\emph{worse}. Accuracy on camera-motion questions fell from 68.2\% to
+55.7\%. We looked at the 18 questions that this wording turned from right
+to wrong. In 12 of them the correct answer was ``moving forward''. But the
+hint never said ``forward''. It said ``pans'' in 16 of them and ``zooms
+in'' in 14. The model simply matched words from the hint to words in the
+options (``Panning from left to right'', ``Zooming in''). The geometry was
+right, but the words pointed to the wrong option.
+
+We then wrote the \emph{same} measurements in the answers' own words. This
+raised camera-motion accuracy to 71.6\%. Compared with the image wording,
+20 questions went from wrong to right and 6 from right to wrong
+($p{=}0.009$). Compared with no hint at all, the gain is small and could be
+luck (+3.4 points, $p{=}0.69$). The control questions did not change (89 /
+88 / 87\%), so the hint does not distract the model on unrelated
+questions.
+
+\begin{table}[t]
+\centering
+\caption{Effect of the hint's wording, Qwen3.5-0.8B without fine-tuning, dev
+(\%): no hint, image wording, camera (answer) wording.}
+\label{tab:cue}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Question set ($n$) & No hint & Image & Camera \\
+\midrule
+Camera-motion Viewpoint (88) & 68.2 & 55.7 & \textbf{71.6} \\
+Viewpoint-angle (90) & 41.1 & 45.6 & 44.4 \\
+All Viewpoint (191) & 56.0 & 52.4 & \textbf{59.2} \\
+Control: causal + general (100) & 89.0 & 88.0 & 87.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Does the trained model actually use the hint?} After fine-tuning,
+we scored dev again in two altered ways: with the hint removed, and with
+the hint of a different, randomly chosen clip (so every clip gets a wrong
+hint; Table~\ref{tab:reliance}). The model uses the hint only where it is
+relevant. On camera-motion questions, a wrong hint costs 13.6 points (13
+questions lost vs.\ 1 gained, $p{=}0.002$), so the model reads what
+the hint says. Removing the hint costs 4.5 points ($p{=}0.34$). So after
+training, the frames carry most of the information, and the hint adds a
+modest amount where it matters. Change Detection, other Viewpoint questions
+and all other tasks do not change (within 1 point). Our pre-registered rule
+required a 5-point drop when the hint is removed, so we call this result
+inconclusive, but with strong evidence that the model reads the hint's
+content.
+
+\begin{table}[t]
+\centering
+\caption{Does the fine-tuned 9B model rely on the hint? (dev, accuracy \%).}
+\label{tab:reliance}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Subset ($n$) & Hint & Removed & Wrong clip's \\
+\midrule
+Camera-motion Viewpoint (88) & \textbf{85.2} & 80.7 & 71.6 \\
+Change Detection (231) & 80.5 & 80.5 & 80.5 \\
+Other Viewpoint (103) & 82.5 & 83.5 & 83.5 \\
+All other tasks (1,656) & 85.4 & 85.5 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Does more time detail at test time help?}
+\label{sec:timetest}
+Section~\ref{sec:h6} showed that wrong exact times are near-misses of
+about one timestamp gap. So we tried giving the trained model more time
+detail at test time, on its
+219 dev temporal questions (Table~\ref{tab:h6}). We tried 32 frames instead
+of 16. We also tried ``jitter'': averaging the answers from three views
+whose frames are taken at 25\%, 50\% and 75\% of each time segment. Both
+made exact-time and range questions \emph{worse}: they fell from 67.3\% to
+62.3\% (32 frames) and to 62.9\% (jitter, $p{=}0.039$). Only the relative
+questions improved, by up to 6.7 points.
+
+Our explanation: the model was trained on 16 centred frames, so it learned
+to read time from that exact layout of timestamps. Moving every timestamp
+at test time breaks what it learned. The fix must therefore come during
+training: train with 32 frames, or with randomly shifted frames, so the
+model learns to read any layout. The final model does both (Step~1), and
+its Temporal Grounding accuracy rises from 67.6\% to 70.3\%. For that
+model, going further to 64 frames at test time no longer hurts, but it
+does not help timing questions either (Sec.~\ref{sec:final-ablation}).
+
+\begin{table}[t]
+\centering
+\caption{More time detail at test time, dev Temporal Grounding
+(fine-tuned 9B, trained at 16 frames; accuracy \%).}
+\label{tab:h6}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Condition & All & Exact/range & Relative \\
+ & (219) & (159) & (60) \\
+\midrule
+16 frames, centred (as trained) & \textbf{68.0} & \textbf{67.3} & 70.0 \\
+32 frames & 66.2 & 62.3 & \textbf{76.7} \\
+Jitter, 3 positions & 65.3 & 62.9 & 71.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{Does the text prior help a big model?}
+\label{sec:prior}
+Mixing the blind scorer into the small 0.8B model (no fine-tuning) added 7.7
+points on a 220-question dev subset, with $\alpha$ chosen by
+cross-validation (64.1$\to$71.8, $p{=}0.0015$). We repeated the test on 250
+new questions with $\alpha{=}0.75$ fixed in advance, and the gain held
+(71.6$\to$77.6, $p{=}0.008$). On both sets, accuracy is flat for $\alpha$
+between 0.5 and 1.5 (Fig.~\ref{fig:alpha}), so the exact value is not
+critical.
+
+With the 9B model, the same mix adds only 0.6 points (79.6$\to$80.1,
+$p{=}0.33$). The bigger model already knows most of these text patterns.
+After fine-tuning the gain is +0.4 (84.7$\to$85.2, $p{=}0.19$), and the
+chosen weight falls to $\alpha{=}0.25$ in every fold. Our pre-registered
+rule was to use the mix only if it adds at least 1 point with $p{<}0.05$.
+It does not, so the submitted system does not use it.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=\columnwidth, height=46mm,
+  xlabel={Prior weight $\alpha$}, ylabel={Accuracy (\%)},
+  xlabel style={font=\footnotesize}, ylabel style={font=\footnotesize},
+  ticklabel style={font=\scriptsize},
+  xmin=0, xmax=3.2, ymin=62, ymax=82,
+  legend style={font=\scriptsize, at={(0.98,0.04)}, anchor=south east, draw=none, fill=none},
+  grid=major, grid style={draw=gray!20},
+]
+\addplot[s2, thick, mark=*, mark size=1.4pt] coordinates {(0,64.1) (0.25,69.5) (0.5,72.7) (0.75,73.6) (1,73.2) (1.5,73.2) (2,73.2) (3,72.3)};
+\addplot[s3, thick, mark=square*, mark size=1.4pt] coordinates {(0,71.6) (0.25,73.6) (0.5,76.0) (0.75,77.6) (1,77.2) (1.5,76.0) (2,74.0) (3,72.4)};
+\addplot[s1, thick, mark=triangle*, mark size=1.6pt] coordinates {(0,79.55) (0.1,79.84) (0.25,79.98) (0.5,79.84) (0.75,80.13) (1,79.88)};
+\legend{0.8B no fine-tuning (first subset), 0.8B no fine-tuning (repeat subset), 9B no fine-tuning (full dev)}
+\end{axis}
+\end{tikzpicture}
+\caption{Accuracy against the weight of the text prior. The gain is large
+and stable for the small model and almost disappears at 9B.}
+\label{fig:alpha}
+\end{figure}
+
+
+\subsection{Training recipe: packing and learning rate}
+\label{sec:packing}
+\textbf{One video, many questions per training example.}
+Each training example spends about 73\% of its length on video tokens:
+roughly 1,920 of 2,000 tokens. Every question about the same clip repeats
+the same video tokens. ReVA has about 15 questions per clip, so most of the
+compute is spent reading the same frames again and again.
+
+\emph{Question packing} puts the video in once and then asks eight
+questions about it, one after another, as a normal chat:
+\[
+\text{[video] hint } Q_1 \rightarrow A_1,\; Q_2 \rightarrow A_2,\; \ldots,\; Q_8 \rightarrow ?
+\]
+The model is trained on the answer letter of every question. Because each
+question comes after the previous ones, no masking is needed, and the
+running memory of the DeltaNet layers is not a problem. We checked that the
+first question's scores are the same packed or unpacked (differences within
+bf16 rounding). Training becomes 6.4 times faster per question on a small
+model. The risk is a mismatch: during training, later questions see other
+questions and answers about the same video, which never happens at test
+time.
+
+We repeated our main run with packing; the rule written beforehand was
+that accuracy must not drop by more than 1 point (test-weighted dev at
+least 81.4\%). The packed run reaches 84.3\% on dev and 81.6\% test-weighted, 0.8 points
+below the unpacked run (82.4\%) and inside the 1-point margin. Training
+took about 70 minutes instead of 5.2\,h, 4.5 times faster. Temporal
+Grounding is slightly higher (68.5\% vs.\ 67.6\%). Packing passes, and
+because a run now takes about 70 minutes, the packed run is the
+reference for the training experiments below. The 0.8-point cost is most
+likely a leak: later questions in a pack can see earlier answers about
+the same video, which never happens at test time.
+
+\textbf{Learning rate.} Every run so far used a learning rate of
+$10^{-4}$, which we never tuned. A recent study that tuned ten LoRA
+variants found that, once the learning rate is tuned, plain LoRA is within
+one point of all of them~\cite{lee2026lrmatters}; the learning rate
+matters more than the variant. We therefore repeated the packed run with
+$2{\times}10^{-4}$, changing nothing else. It reached 78.3\% test-weighted,
+3.3 points below the packed run at $10^{-4}$ (81.6\%), so we kept
+$10^{-4}$. A lower rate ($5{\times}10^{-5}$) was planned but not run.
+
+
+\subsection{Does an object-motion hint help?}
+\label{sec:objmotion}
+The ReVA paper names one main failure of video models: confusing the
+camera's movement with the movement of objects. Our camera hint tells the
+model how the camera moves, but not how the cars move. The
+\emph{object-motion hint} does this. For each pair of frames, we
+compute dense optical flow (how every pixel moves), fit the ground's
+movement with a homography (a transform that also handles tilted views),
+and subtract it. Whatever still moves is a moving object. We keep only
+small moving blobs that continue in the same direction in the next step,
+and describe them by region of the frame and direction, in the questions'
+own words:
+
+\smallskip
+\noindent\fbox{\parbox{0.95\columnwidth}{\footnotesize\ttfamily
+Object motion (camera motion removed): top-right: moving right to left
+(0.9-3.9s).}}
+\smallskip
+
+\noindent This targets Change Detection and Trend \& Pattern. The hint is
+computed for all 1,047 clips: 32 clips have no clearly moving objects and
+the median hint is 40 words long. We keep it only if it raises
+test-weighted dev by at least 0.5 points (with $p<0.2$), or raises Change
+Detection plus Trend \& Pattern by at least 2 points without any task
+losing more than 1.5.
+
+\textbf{Result: no gain.} On the plain pass, test-weighted dev falls from
+81.6\% to 80.7\% ($-0.9$). With letter debiasing on both runs it is
+unchanged (81.0 vs.\ 81.1); each run answers 62 questions the other
+misses ($p{=}1.0$). The tasks move in both directions: Structural Layout
+$+3.5$ and Geometric Relation $+2.8$, but Object \& Land Cover $-2.8$ and
+Change Detection, one of the two target tasks, $-1.3$. Trend \& Pattern
+gains only 1.1. Neither rule is met, so the hint is dropped. Two likely
+reasons, not yet checked:
+after fine-tuning, the frames already show the model how vehicles move,
+and on low, tilted views the residual flow still contains parallax from
+buildings that the blob filter does not fully remove.
+
+
+
+\subsection{What did not help the final model}
+\label{sec:final-ablation}
+The last block of Table~\ref{tab:ablation} tests four more ideas on the
+final recipe. Besides dev, we use a second check that is closer to the
+test: the 392 test questions that match a validation question in clip,
+question and option set, so their answers are in the official validation
+file. The final model answers 316 of them correctly (80.6\%).
+
+\textbf{A second training pass.} Two passes with the learning rate decayed
+over both reach 82.96\% test-weighted dev, against 83.04\% for one pass,
+and 315 against 316 of the 392 test questions. One pass is enough.
+
+\textbf{A caption hint from the question writer.} ReVA's questions were
+written by a large model from video captions. We replayed that captioning
+model (Qwen3-VL-30B-A3B) on every clip and gave its caption as a second
+hint. Without fine-tuning and without frames, the caption lifts the 9B
+model from 64.5\% to 75.9\% on dev (a different clip's caption: 59.3\%),
+so the captions carry much of what the questions ask. After fine-tuning,
+however, the gain is gone: dev moves by $+0.4$ (85.5\% vs.\ 85.0\%, within
+noise), and on the 392 test questions the model with the caption is
+\emph{worse} (309 vs.\ 316). We dropped it.
+
+\textbf{More frames at test time.} Scoring the final model with 64 frames
+on its three weakest tasks leaves Change Detection unchanged (79.2\%),
+moves Temporal Grounding from 70.3\% to 69.9\%, and raises Trend \& Pattern
+from 81.0\% to 83.2\%. The last gain rests on 4 questions ($p{=}0.125$), so
+we do not count it.
+
+\textbf{The question writer as a second model.} The same 30B model,
+without fine-tuning and with both hints, scores 80.0\% on dev, below every
+fine-tuned 9B model. Combined with the final model (weights chosen on dev
+with folds split by clip), it adds 0.96 test-weighted points on dev
+($p{=}0.076$), but only 1 of the 392 test questions. A combination with the
+caption-hint model looked better still on dev ($+0.84$, $p{=}0.014$) and
+answered one test question \emph{fewer}. On this benchmark, gains of about
+one point on dev did not carry over to the test.
